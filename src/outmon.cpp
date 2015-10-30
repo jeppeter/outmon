@@ -18,6 +18,7 @@ static char* st_pFile=NULL;
 static int st_FileMode=FILE_CREATE;
 static int st_Running=1;
 static int st_GlobalWin32 = 0;
+static int st_TeeMode= 0;
 static HANDLE st_hExitEvt=NULL;
 
 BOOL WINAPI HandlerConsoleRoutine(DWORD dwCtrlType)
@@ -76,6 +77,7 @@ void Usage(int ec,const char* fmt,...)
     fprintf(fp,"\t-a|--append filename   to specify the file of output and append it\n");
     fprintf(fp,"\t-c|--create filename   to specify the file of output and create it\n");
     fprintf(fp,"\t-g|--global            to specify capture global win32\n");
+    fprintf(fp,"\t-t|--tee               to specify the tee mode just stdout\n");
     fprintf(fp,"default output is stdout\n");
 
     exit(ec);
@@ -110,9 +112,16 @@ int ParseParam(int argc,char* argv[])
         } else if (strcmp(argv[i],"-g")==0 ||
                    strcmp(argv[i],"--global")==0) {
             st_GlobalWin32 = 1;
+        } else if (strcmp(argv[i],"-t")==0 ||
+                   strcmp(argv[i],"--tee")==0) {
+            st_TeeMode = 1;
         } else {
             Usage(3,"unrecognize parameter %s",argv[i]);
         }
+    }
+
+    if (st_pFile == NULL && st_TeeMode ) {
+        st_TeeMode = 0;
     }
 
     return 0;
@@ -170,11 +179,11 @@ int OutputMonitorWriteFile()
         } else {
             fopen_s(&fp,st_pFile,"w+");
         }
-    } else {
+    } else if (st_TeeMode == 0) {
         fp = stdout;
     }
 
-    if(fp == NULL) {
+    if(fp == NULL && st_TeeMode) {
         ret=  GETERRNO();
         ERROROUT("%s %s Error(%d)\n",st_FileMode == FILE_APPEND ? "Append":"Create",st_pFile ? st_pFile : "stdout",ret);
         goto out;
@@ -233,12 +242,23 @@ int OutputMonitorWriteFile()
             /*now to write down*/
             for(i=0; i<pBuffers.size(); i++) {
                 pBuffer = pBuffers[i];
-                ret = fprintf_s(fp,"(%d)[%d]%s",GetTickCount(),pBuffer->dwProcessId,pBuffer->data);
-                if(ret < 0) {
-                    ret = GETERRNO();
-                    ERROROUT("write(%d:%s) Error(%d)\n",pBuffer->dwProcessId,pBuffer->data,ret);
-                    goto out;
+                if (fp) {
+                    ret = fprintf_s(fp,"(%d)[%d]%s",GetTickCount(),pBuffer->dwProcessId,pBuffer->data);
+                    if(ret < 0) {
+                        ret = GETERRNO();
+                        ERROROUT("write(%d:%s) Error(%d)\n",pBuffer->dwProcessId,pBuffer->data,ret);
+                        goto out;
+                    }
                 }
+                if (st_TeeMode) {
+                    ret = fprintf_s(stdout,"(%d)[%d]%s",GetTickCount(),pBuffer->dwProcessId,pBuffer->data);
+                    if(ret < 0) {
+                        ret = GETERRNO();
+                        ERROROUT("write(%d:%s) Error(%d)\n",pBuffer->dwProcessId,pBuffer->data,ret);
+                        goto out;
+                    }
+                }
+
                 pBuffer = NULL;
             }
 
