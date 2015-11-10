@@ -25,13 +25,13 @@ call includeFile("reg_op.vbs")
 call includeFile("vs_find.vbs")
 call includeFile("base_func.vbs")
 
-vsver=IsInstallVisualStudio(14.0,"SOFTWARE\Microsoft\VisualStudio")
+vsver=IsInstallVisualStudio(10.0,"SOFTWARE\Microsoft\VisualStudio")
 if IsEmpty(vsver) Then
 	wscript.stderr.writeline("Please Install visual studio new version than 14.0")
 	WScript.Quit(3)
 End If
 
-vspdir=ReadReg("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VSPerf\VSPerfReportPath")
+vspdir=ReadReg("HKEY_CURRENT_USER\SOFTWARE\Microsoft\VisualStudio\"& vsver &"_Config\InstallDir")
 if IsEmpty(vspdir) Then
 	wscript.stderr.writeline("can not find visual studio install directory")
 	wscript.quit(4)

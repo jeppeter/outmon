@@ -32,7 +32,7 @@ Function IsInstallVisualStudio(version,pathkey)
 			End If
 		Next
 
-		if getkey > 0 Then
+		if getkey > 0 Then			
 			IsInstallVisualStudio=getkey
 		else
 			IsInstallVisualStudio=Empty
