@@ -1,0 +1,31 @@
+
+!IF "$(RELEASE_ARCH)" == "x86"
+!ELSEIF "$(RELEASE_ARCH)" == "x64"
+!ELSE
+!error "not support RELEASE_ARCH please specify x64 or x86"
+!ENDIF
+
+!IF "$(VC_SETVAR_ARCH)" == "amd64"
+!ELSEIF "$(VC_SETVAR_ARCH)" == "amd64_x86"
+!ELSE
+!error "not support VC_SETVAR_ARCH please specify amd64 or amd64_x86"
+!ENDIF
+
+
+
+all:build\$(RELEASE_ARCH)\outmon\Relase\outmon.exe
+	copy /Y build\$(RELEASE_ARCH)\outmon\Release\outmon.exe .\outmon_$(RELEASE_ARCH).exe
+
+build\$(RELEASE_ARCH)\outmon\Relase\outmon.exe:build\$(RELEASE_ARCH)\outmon.sln
+!IF "$(RELEASE_ARCH)"	 == "x86"
+	cscript runcompile.vbs -s build\$(RELEASE_ARCH)\outmon.sln -t "Release|Win32" $(VC_SETVAR_ARCH)
+!ELSE
+	cscript runcompile.vbs -s build\$(RELEASE_ARCH)\outmon.sln -t "Release|$(RELEASE_ARCH)" $(VC_SETVAR_ARCH)
+!ENDIF	
+
+build\$(RELEASE_ARCH)\outmon.sln:
+	mkdir build\$(RELEASE_ARCH) || echo ""
+	cscript cmakerun.vbs -s "." -d build\$(RELEASE_ARCH) -a $(RELEASE_ARCH)
+
+clean:
+	rmdir /s /q build\$(RELEASE_ARCH)

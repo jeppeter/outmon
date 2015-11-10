@@ -1,0 +1,7 @@
+Howto Compile
+please make sure install visual studio 2010 or later and cmake 2.8 or later
+
+
+run x86make.bat for outmon_x86.exe
+run x64make.bat for outmon_x64.exe
+
