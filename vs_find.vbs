@@ -71,3 +71,22 @@ End Function
 
 
 
+Function VsVerifyCL(vsver)
+	dim basedir,instdir,ret,clcmd
+
+	instdir = ReadReg("HKEY_CURRENT_USER\SOFTWARE\Microsoft\VisualStudio\"& vsver &"_Config\InstallDir")
+	if IsEmpty(instdir) Then
+		VsVerifyCL=0
+		exit function
+	End If
+
+	basedir=FindoutInstallBasedir(instdir,vsver)
+	clcmd = basedir & "\VC\bin\cl.exe" 
+	ret=FileExists(clcmd)
+	if ret Then
+		VsVerifyCL=1
+	Else
+		VsVerifyCL=0
+	End If	
+End Function
+

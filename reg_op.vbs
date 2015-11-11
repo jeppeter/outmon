@@ -13,7 +13,7 @@ Function GetRegSubkeys(root,pathkey)
 
 	retval = objReg.EnumKey(root,pathkey,arraykey)
 	if retval <> 0  or not IsArray(arraykey) Then
-		wscript.stderr.writeline( "get "&pathkey & " error "&err.number)
+		'wscript.stderr.writeline( "get "&pathkey & " error "&err.number)
 		set objReg = Nothing
 		arraykey=Empty
 		GetRegSubkeys=Empty
@@ -38,4 +38,24 @@ Function ReadReg(key)
 		ReadReg=value
 	End If
 End Function
+
+Function DeleteRegSubkeysInner(regobj,rootkey,path)
+	dim arrsubkeys,key,curpath
+	arrsubkeys=GetRegSubkeys(rootkey, path)
+	If not IsEmpty(arrsubkeys) Then
+		For Each key in arrsubkeys
+			curpath = path & "\" & key
+			call DeleteRegSubkeysInner(regobj, rootkey, curpath)
+		Next
+	End If
+
+	regobj.DeleteKey rootkey,path
+End Function
+
+Function DeleteRegSubkeys(rootkey,path)
+	dim regobj
+	set regobj = GetObject("winmgmts:\\.\root\default:StdRegProv")
+	call DeleteRegSubkeysInner(regobj, rootkey, path)
+End Function
+
 

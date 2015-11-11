@@ -70,3 +70,13 @@ End Function
 
 
 
+Function FileExists(pathf)
+	dim fso
+	set fso = CreateObject("Scripting.FileSystemObject")
+	if (fso.FileExists(pathf)) Then
+		FileExists=1
+	Else
+		FileExists=0
+	End If	
+End Function
+
