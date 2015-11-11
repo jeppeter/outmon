@@ -40,35 +40,28 @@ Function IsInstallVisualStudio(version,pathkey)
 	End If
 End Function
 
-
 Function FindoutInstallBasedir(directory,vsver)
-	dim narr,i,j,num,sp,mstr
+	dim narr,i,j,num,sp,ret,clexe
 
 	narr = Split(directory,"\")
 	if IsArray(narr) Then
 		num=Ubound(narr)
 		i=num
-		mstr="Microsoft Visual Studio " & vsver
-		do While i >= 0
-			if narr(i) = mstr Then
-				exit do
-			End If
-			i = i - 1
-		Loop
-
 		j=1
 		sp=narr(0)
 		While j < (i+1)
-			sp = sp & "\" & narr(j)
+			clexe = sp & "\VC\bin\cl.exe"
+			ret =FileExists(clexe)
+			if ret Then
+				FindoutInstallBasedir=sp
+				Exit Function
+			End If
+			sp = sp & "\" & narr(j)			
 			j = j + 1
 		Wend
-		FindoutInstallBasedir=sp
-	else
-		FindoutInstallBasedir=""
 	End If
-
+	FindoutInstallBasedir=""
 End Function
-
 
 
 Function VsVerifyCL(vsver)
