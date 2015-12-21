@@ -242,6 +242,10 @@ int OutputMonitorWriteFile()
             /*now to write down*/
             for(i=0; i<pBuffers.size(); i++) {
                 pBuffer = pBuffers[i];
+                if (st_Running == 0){
+                    ret = -1;
+                    goto out;
+                }
                 if (fp) {
                     ret = fprintf_s(fp,"(%d)[%d]%s",GetTickCount(),pBuffer->dwProcessId,pBuffer->data);
                     if(ret < 0) {
