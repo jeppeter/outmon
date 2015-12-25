@@ -325,6 +325,8 @@ int OutputMonitor::__CreateMutexEvent()
 
         if(this->m_hDBWinMutex == NULL) {
             ret = GETERRNO();
+            ERROROUT("can not Create (%s) error(%d)\n",
+                this->m_GlobalWin32 ? "Global\\DBWinMutex" : "DBWinMutex",ret);
             goto fail;
         }
     }
@@ -342,6 +344,8 @@ int OutputMonitor::__CreateMutexEvent()
         }
         if(this->m_hDBWinBufferReady == NULL) {
             ret = GETERRNO();
+            ERROROUT("can not create (%s) error(%d)\n",
+                this->m_GlobalWin32 ? "Global\\DBWIN_BUFFER_READY" : "DBWIN_BUFFER_READY",ret);
             goto fail;
         }
     }
@@ -360,6 +364,8 @@ int OutputMonitor::__CreateMutexEvent()
         }
         if(this->m_hDBWinDataReady == NULL) {
             ret = GETERRNO();
+            ERROROUT("can not craete (%s) error(%d)\n",
+                this->m_GlobalWin32 ? "Global\\DBWIN_DATA_READY" : "DBWIN_DATA_READY",ret);
             goto fail;
         }
     }
@@ -392,6 +398,8 @@ int OutputMonitor::__MapBuffer()
         }
         if(this->m_hDBWinMapBuffer == NULL) {
             ret = GETERRNO();
+            ERROROUT("can not create map (%s) error(%d)\n",
+                this->m_GlobalWin32 ? "Global\\DBWIN_BUFFER" : "DBWIN_BUFFER",ret);
             goto fail;
         }
     }
@@ -399,6 +407,8 @@ int OutputMonitor::__MapBuffer()
     this->m_pDBWinBuffer = MapFileBuffer(this->m_hDBWinMapBuffer,sizeof(DBWIN_BUFFER_t));
     if(this->m_pDBWinBuffer == NULL) {
         ret = GETERRNO();
+        ERROROUT("can not map (%s) error(%d)\n",
+            this->m_GlobalWin32 ? "Global\\DBWIN_BUFFER" : "DBWIN_BUFFER",ret);
         goto fail;
     }
 
