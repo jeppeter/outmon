@@ -1,15 +1,18 @@
 
 
-#include "uniansi.h"
+#include <uniansi.h>
 #include <Windows.h>
 #include <assert.h>
-#include "output_debug.h"
+#include <output_debug.h>
+#include <err.h>
 
-extern "C" int UnicodeToAnsi(wchar_t* pWideChar,char** ppChar,int*pCharSize)
+#pragma warning(disable:4996)
+
+extern "C" int UnicodeToAnsi(wchar_t* pWideChar, char** ppChar, int*pCharSize)
 {
     char* pRetChar = *ppChar;
     int retcharsize = *pCharSize;
-    int ret,wlen,needlen;
+    int ret, wlen, needlen;
 
     if (pWideChar == NULL) {
         if (*ppChar) {
@@ -19,20 +22,21 @@ extern "C" int UnicodeToAnsi(wchar_t* pWideChar,char** ppChar,int*pCharSize)
         *pCharSize = 0;
         return 0;
     }
-    wlen =(int) wcslen(pWideChar);
-    needlen = WideCharToMultiByte(CP_ACP,0,pWideChar,wlen,NULL,0,NULL,NULL);
+    wlen = (int)wcslen(pWideChar);
+    needlen = WideCharToMultiByte(CP_ACP, 0, pWideChar, wlen, NULL, 0, NULL, NULL);
     if (retcharsize <= needlen) {
-        retcharsize = (needlen+1);
+        retcharsize = (needlen + 1);
         pRetChar = new char[needlen + 1];
         assert(pRetChar);
     }
 
-    ret = WideCharToMultiByte(CP_ACP,0,pWideChar,wlen,pRetChar,retcharsize,NULL,NULL);
+    ret = WideCharToMultiByte(CP_ACP, 0, pWideChar, wlen, pRetChar, retcharsize, NULL, NULL);
     if (ret != needlen) {
         ret = ERROR_INVALID_BLOCK;
         goto fail;
     }
     pRetChar[needlen] = '\0';
+    needlen += 1;
 
     if ((*ppChar) && (*ppChar) != pRetChar) {
         char* pTmpChar = *ppChar;
@@ -41,7 +45,7 @@ extern "C" int UnicodeToAnsi(wchar_t* pWideChar,char** ppChar,int*pCharSize)
     *ppChar = pRetChar;
     *pCharSize = retcharsize;
 
-    return ret;
+    return needlen;
 fail:
     if (pRetChar && pRetChar != (*ppChar)) {
         delete [] pRetChar;
@@ -53,11 +57,11 @@ fail:
 }
 
 
-extern "C" int AnsiToUnicode(char* pChar,wchar_t **ppWideChar,int*pWideCharSize)
+extern "C" int AnsiToUnicode(char* pChar, wchar_t **ppWideChar, int*pWideCharSize)
 {
     wchar_t *pRetWideChar = *ppWideChar;
     int retwidecharsize = *pWideCharSize;
-    int ret,len,needlen;
+    int ret, len, needlen;
 
     if (pChar == NULL) {
         if (*ppWideChar) {
@@ -68,15 +72,15 @@ extern "C" int AnsiToUnicode(char* pChar,wchar_t **ppWideChar,int*pWideCharSize)
         return 0;
     }
 
-    len =(int) strlen(pChar);
-    needlen = MultiByteToWideChar(CP_ACP,0,pChar,len,NULL,0);
+    len = (int) strlen(pChar);
+    needlen = MultiByteToWideChar(CP_ACP, 0, pChar, len, NULL, 0);
     if (retwidecharsize <= needlen) {
         retwidecharsize = needlen + 1;
         pRetWideChar = new wchar_t[retwidecharsize];
         assert(pRetWideChar);
     }
 
-    ret = MultiByteToWideChar(CP_ACP,0,pChar,len,pRetWideChar,retwidecharsize);
+    ret = MultiByteToWideChar(CP_ACP, 0, pChar, len, pRetWideChar, retwidecharsize);
     if (ret != needlen) {
         ret = ERROR_INVALID_BLOCK;
         goto fail;
@@ -98,4 +102,75 @@ fail:
     retwidecharsize = 0;
     SetLastError(ret);
     return -ret;
+}
+
+#ifndef _UNICODE
+int _chartoansi(const char *ptchar, char** ppChar, int*pCharSize)
+{
+	int needlen=0;
+	int needsize=*pCharSize;
+	int ret;
+	char* pRetChar = *ppChar;
+
+	if (ptchar == NULL){
+		/*if null, we just free memory*/
+		if (pRetChar){
+			free(pRetChar);
+		}
+		*ppChar = NULL;
+		*pCharSize = 0;
+		return 0;
+	}
+
+	needlen = (int)strlen(ptchar);
+	needlen += 1;
+	if (pRetChar == NULL || *pCharSize < needlen){
+		pRetChar =(char*) malloc(needlen);
+		if (pRetChar == NULL){
+			GETERRNO(ret);
+			goto fail;
+		}
+		needsize = needlen;
+	}
+
+	memcpy(pRetChar,ptchar,needlen);
+	if (pRetChar != *ppChar && *ppChar != NULL){
+		free(*ppChar);
+	}
+
+	*ppChar = pRetChar;
+	*pCharSize = needsize;
+
+	return needlen;
+fail:
+	if (pRetChar != *ppChar && pRetChar != NULL){
+		free(pRetChar);
+	}
+	pRetChar = NULL;
+	return ret;
+}
+
+#endif
+
+
+extern "C" int TcharToAnsi(TCHAR *ptchar, char** ppChar, int*pCharSize)
+{
+	int ret;
+#ifdef _UNICODE
+	ret = UnicodeToAnsi(ptchar,ppChar,pCharSize);
+#else
+	ret = _chartoansi(ptchar,ppChar,pCharSize);
+#endif
+	return ret;
+}
+
+extern "C" int AnsiToTchar(const char *pChar,TCHAR **pptchar,int *ptcharsize)
+{
+	int ret;
+#ifdef _UNICODE
+	ret = AnsiToUnicode((char*)pChar,pptchar,ptcharsize);
+#else
+	ret = _chartoansi(pChar,pptchar,ptcharsize);
+#endif
+	return ret;
 }

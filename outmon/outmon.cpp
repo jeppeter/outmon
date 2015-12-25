@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <evt.h>
 #include <tchar.h>
+#include <priv.h>
 
 
 #define  ERROROUT(...) do{fprintf(stderr,"%s:%d\t",__FILE__,__LINE__);fprintf(stderr,__VA_ARGS__);}while(0)
@@ -165,6 +166,7 @@ int OutputMonitorWriteFile()
     UINT i;
     HANDLE hWaits[3];
     int waitnum = 2;
+    HANDLE hGlobalToken=NULL;
 
     st_hExitEvt = GetEvent(NULL,1);
     if(st_hExitEvt == NULL) {
@@ -190,6 +192,13 @@ int OutputMonitorWriteFile()
     }
 
     if (st_GlobalWin32) {
+        ret = EnableGlobalPriv(&hGlobalToken);
+        if (ret < 0){
+            ret = GETERRNO();
+            ERROROUT("can not enable Global Priv error(%d)\n",ret);
+            goto out;
+        }
+        INFOOUT("enable global privilege\n");
         SetGlobalFlag(TRUE);
     }
 
@@ -305,6 +314,10 @@ out:
         fclose(fp);
     }
     fp = NULL;
+
+    if (st_GlobalWin32){
+        DisableGlobalPriv(&hGlobalToken);
+    }
 
     if(st_hExitEvt) {
         CloseHandle(st_hExitEvt);
