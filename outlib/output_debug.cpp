@@ -1,6 +1,8 @@
 
 #include "output_debug.h"
 
+#define _INN_DEBUG(...)   do{fprintf(stderr,"[%s:%d] ",__FILE__,__LINE__); fprintf(stderr, __VA_ARGS__); fprintf(stderr,"\n");fflush(stderr);} while(0)
+
 typedef void (*m_output_func_t)(char* str);
 
 extern "C" void InnerDebug(char* pFmtStr)
@@ -24,13 +26,19 @@ extern "C" void InnerDebug(char* pFmtStr)
     return ;
 }
 
+void __console_out(char* fmtstr)
+{
+    fprintf(stderr,"%s",fmtstr);
+    fflush(stderr);
+    return;
+}
+
 
 
 void __inner_format_output(const char* file, int lineno, const char* fmt, va_list ap, m_output_func_t func, ...)
 {
     va_list funcap;
     m_output_func_t curfunc;
-
     char* pFmt = NULL;
     char* pLine = NULL;
     char* pWhole = NULL;
@@ -42,16 +50,17 @@ void __inner_format_output(const char* file, int lineno, const char* fmt, va_lis
     pWhole = new char[4000];
 
     _snprintf_s(pLine, 2000, 1999, "%s:%d:time(0x%08x)\t", file, lineno, GetTickCount());
-    va_start(ap, fmt);
     _vsnprintf_s(pFmt, 2000, 1999, fmt, ap);
     strcpy_s(pWhole, 4000, pLine);
     strcat_s(pWhole, 4000, pFmt);
+    strcat_s(pWhole,4000,"\n");
 
+    curfunc = func;
     do {
-        curfunc = va_arg(funcap, m_output_func_t);
         if (curfunc) {
             curfunc(pWhole);
         }
+        curfunc = va_arg(funcap, m_output_func_t);
     } while (curfunc != NULL);
 
     delete [] pFmt;
@@ -66,11 +75,12 @@ void __inner_format_output(const char* file, int lineno, const char* fmt, va_lis
 do                                                                                                \
 {                                                                                                 \
     va_copy(funcap,funcoldap);                                                                    \
+    curfunc = func;                                                                               \
     do{                                                                                           \
-        curfunc = va_arg(funcap,m_output_func_t);                                                 \
         if (curfunc != NULL) {                                                                    \
             curfunc(pLine);                                                                       \
         }                                                                                         \
+        curfunc = va_arg(funcap,m_output_func_t);                                                 \
     }while(curfunc != NULL);                                                                      \
     pCur = pLine;                                                                                 \
     formedlen = 0;                                                                                \
@@ -173,7 +183,8 @@ extern "C" void DebugOutString(const char* file, int lineno, const char* fmt, ..
 {
     va_list ap;
     va_start(ap, fmt);
-    __inner_format_output(file, lineno, fmt, ap, InnerDebug, NULL);
+    //__inner_format_output(file, lineno, fmt, ap, InnerDebug, NULL);
+    __inner_format_output(file, lineno, fmt, ap, __console_out, NULL);
     return;
 }
 
@@ -185,7 +196,8 @@ extern "C" void DebugBufferFmt(const char* file, int lineno, unsigned char* pBuf
         va_start(ap, fmt);    
     }
     
-    __inner_buffer_output(file,lineno, pBuffer, buflen, fmt,ap,InnerDebug,NULL);
+    //__inner_buffer_output(file,lineno, pBuffer, buflen, fmt,ap,InnerDebug,NULL);
+    __inner_buffer_output(file,lineno, pBuffer, buflen, fmt,ap,__console_out,NULL);
     return ;
 }
 

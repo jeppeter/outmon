@@ -1,6 +1,7 @@
 
 #include <evt.h>
 #include <uniansi.h>
+#include <output_debug.h>
 
 #define LAST_ERROR_CODE() ((int)(GetLastError() ? GetLastError() : 1))
 
@@ -37,7 +38,7 @@ HANDLE GetEvent(const char* pName,int create)
 #ifdef _UNICODE
     AnsiToUnicode(NULL,&pNameW,&namesize);
 #endif
-
+    DEBUG_INFO("%s [%s] event", create ? "create" : "open", pName);
     return hEvent;
 fail:
 #ifdef _UNICODE
@@ -81,6 +82,7 @@ HANDLE GetMutex(const char* pName,int create)
         goto fail;
     }
 
+    DEBUG_INFO("%s [%s] mutex", create ? "create" : "open", pName);
 #ifdef _UNICODE
     AnsiToUnicode(NULL,&pNameW,&namesize);
 #endif
