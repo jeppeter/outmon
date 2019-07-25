@@ -72,7 +72,7 @@ HANDLE CreateMapFile(const char* pMapFileName,int size,int create)
     AnsiToUnicode(NULL,&pMapFileW,&mapfilesize);
 #endif
 
-    DEBUG_INFO("%s [%s] map mem [%p]", create ? "create" : "open", pMapFileName, hMapFile);
+    DEBUG_INFO("%s [%s] map mem [%p] rwflag [0x%lx]", create ? "create" : "open", pMapFileName, hMapFile, PAGE_READWRITE);
     return hMapFile;
 fail:
     if(hMapFile) {
