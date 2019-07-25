@@ -1,6 +1,7 @@
 
 #include <memshare.h>
 #include <uniansi.h>
+#include <output_debug.h>
 
 #define LAST_ERROR_CODE() ((int)(GetLastError() ? GetLastError() : 1))
 
@@ -71,6 +72,7 @@ HANDLE CreateMapFile(const char* pMapFileName,int size,int create)
     AnsiToUnicode(NULL,&pMapFileW,&mapfilesize);
 #endif
 
+    DEBUG_INFO("%s [%s] map mem [%p]", create ? "create" : "open", pMapFileName, hMapFile);
     return hMapFile;
 fail:
     if(hMapFile) {
@@ -89,6 +91,7 @@ unsigned char* MapFileBuffer(HANDLE hMapFile,int size)
     void* pMemBase=NULL;
 
     pMemBase = MapViewOfFile(hMapFile,FILE_MAP_ALL_ACCESS,0,0,size);
+    DEBUG_INFO("map [%p] to buffer [%p]", hMapFile, pMemBase);
     return (unsigned char*)pMemBase;
 }
 
