@@ -24,6 +24,7 @@
     <ClCompile Include="..\..\outlib\memshare.cpp" />
     <ClCompile Include="..\..\outlib\output_debug.cpp" />
     <ClCompile Include="..\..\outlib\output_monitor.cpp" />
+    <ClCompile Include="..\..\outlib\priv.cpp" />
     <ClCompile Include="..\..\outlib\sched.cpp" />
     <ClCompile Include="..\..\outlib\uniansi.cpp" />
   </ItemGroup>

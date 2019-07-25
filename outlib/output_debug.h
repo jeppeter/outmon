@@ -45,5 +45,4 @@ extern "C" void DebugBufferFmt(const char* file,int lineno,unsigned char* pBuffe
 #define  DEBUG_BUFFER_FMT(ptr,blen,...) DebugBufferFmt(__FILE__,__LINE__,(unsigned char*)ptr,blen,__VA_ARGS__)
 
 
-
 #endif /*__OUTPUT_DEBUG_H__*/

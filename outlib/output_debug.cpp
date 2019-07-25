@@ -1,18 +1,18 @@
 
 #include "output_debug.h"
 
-
+typedef void (*m_output_func_t)(char* str);
 
 extern "C" void InnerDebug(char* pFmtStr)
 {
 #ifdef UNICODE
-    LPWSTR pWide=NULL;
+    LPWSTR pWide = NULL;
     int len;
     BOOL bret;
     len = (int) strlen(pFmtStr);
-    pWide = new wchar_t[len*2];
-    bret = MultiByteToWideChar(CP_ACP,NULL,pFmtStr,-1,pWide,len*2);
-    if(bret) {
+    pWide = new wchar_t[len * 2];
+    bret = MultiByteToWideChar(CP_ACP, NULL, pFmtStr, -1, pWide, len * 2);
+    if (bret) {
         OutputDebugString(pWide);
     } else {
         OutputDebugString(L"can not change fmt string");
@@ -24,24 +24,36 @@ extern "C" void InnerDebug(char* pFmtStr)
     return ;
 }
 
-extern "C" void DebugOutString(const char* file,int lineno,const char* fmt,...)
+
+
+void __inner_format_output(const char* file, int lineno, const char* fmt, va_list ap, m_output_func_t func, ...)
 {
-    char* pFmt=NULL;
-    char* pLine=NULL;
-    char* pWhole=NULL;
-    va_list ap;
+    va_list funcap;
+    m_output_func_t curfunc;
+
+    char* pFmt = NULL;
+    char* pLine = NULL;
+    char* pWhole = NULL;
+
+    va_start(funcap,func);
 
     pFmt = new char[2000];
     pLine = new char[2000];
     pWhole = new char[4000];
 
-    _snprintf_s(pLine,2000,1999,"%s:%d:time(0x%08x)\t",file,lineno,GetTickCount());
-    va_start(ap,fmt);
-    _vsnprintf_s(pFmt,2000,1999,fmt,ap);
-    strcpy_s(pWhole,4000,pLine);
-    strcat_s(pWhole,4000,pFmt);
+    _snprintf_s(pLine, 2000, 1999, "%s:%d:time(0x%08x)\t", file, lineno, GetTickCount());
+    va_start(ap, fmt);
+    _vsnprintf_s(pFmt, 2000, 1999, fmt, ap);
+    strcpy_s(pWhole, 4000, pLine);
+    strcat_s(pWhole, 4000, pFmt);
 
-    InnerDebug(pWhole);
+    do {
+        curfunc = va_arg(funcap, m_output_func_t);
+        if (curfunc) {
+            curfunc(pWhole);
+        }
+    } while (curfunc != NULL);
+
     delete [] pFmt;
     delete [] pLine;
     delete [] pWhole;
@@ -50,58 +62,130 @@ extern "C" void DebugOutString(const char* file,int lineno,const char* fmt,...)
 }
 
 
-extern "C" void DebugBufferFmt(const char* file,int lineno,unsigned char* pBuffer,int buflen,const char* fmt,...)
+#define FLUSH_BUFFER()                                                                            \
+do                                                                                                \
+{                                                                                                 \
+    va_copy(funcap,funcoldap);                                                                    \
+    do{                                                                                           \
+        curfunc = va_arg(funcap,m_output_func_t);                                                 \
+        if (curfunc != NULL) {                                                                    \
+            curfunc(pLine);                                                                       \
+        }                                                                                         \
+    }while(curfunc != NULL);                                                                      \
+    pCur = pLine;                                                                                 \
+    formedlen = 0;                                                                                \
+}while(0)
+
+
+#define SNPRINTF(...)                                                                             \
+do{                                                                                               \
+    ret = _snprintf_s(pCur,fmtlen-formedlen,fmtlen-formedlen-1,__VA_ARGS__);                      \
+    if (ret >= 0 && ret < (fmtlen - formedlen)) {                                                 \
+        pCur += ret;                                                                              \
+        formedlen += ret;                                                                         \
+    }                                                                                             \
+} while(0)
+
+#define VSNPRINTF(fmt,ap)                                                                         \
+do{                                                                                               \
+    ret = _vsnprintf_s(pCur,fmtlen-formedlen,fmtlen-formedlen-1,fmt,ap);                          \
+    if (ret >= 0 && ret < (fmtlen - formedlen)) {                                                 \
+        pCur += ret;                                                                              \
+        formedlen += ret;                                                                         \
+    }                                                                                             \
+} while(0)
+
+
+void __inner_buffer_output(const char* file, int lineno, unsigned char* pBuffer, int buflen,const char* fmt,  va_list ap, m_output_func_t func, ...)
 {
-    int fmtlen=2000;
-    char*pLine=NULL,*pCur;
+    int fmtlen = 2000;
+    char*pLine = NULL, *pCur;
     int formedlen;
+    int lastlen;
     int ret;
     int i;
+    va_list funcap;
+    va_list funcoldap;
+    m_output_func_t curfunc;
     pLine = new char[fmtlen];
     pCur = pLine;
     formedlen = 0;
+    lastlen = 0;
 
-    ret = _snprintf_s(pCur,fmtlen-formedlen,fmtlen-formedlen-1,"[%s:%d:time(0x%08x)]\tbuffer %p (%d)",file,lineno,GetTickCount(),pBuffer,buflen);
-    pCur += ret;
-    formedlen += ret;
+    va_start(funcap, func);
+    va_copy(funcoldap, funcap);
 
-    if(fmt) {
-        va_list ap;
-        va_start(ap,fmt);
-        ret = _vsnprintf_s(pCur,fmtlen-formedlen,formedlen-formedlen - 1,fmt,ap);
-        pCur += ret;
-        formedlen += ret;
+    SNPRINTF("[%s:%d:time(0x%08x)]\tbuffer %p (%d)", file, lineno, GetTickCount(), pBuffer, buflen);
+
+    if (fmt) {
+        VSNPRINTF(fmt, ap);
     }
 
-    for(i=0; i<buflen; i++) {
-        if((formedlen +100)>fmtlen) {
-            InnerDebug(pLine);
-            pCur = pLine;
-            formedlen = 0;
+    for (i = 0; i < buflen; i++) {
+        if ((formedlen + 100) > fmtlen) {
+            FLUSH_BUFFER();
         }
-        if((i%16)==0) {
-            ret = _snprintf_s(pCur,fmtlen-formedlen,fmtlen-formedlen-1,"\n");
-            InnerDebug(pLine);
-            pCur = pLine;
-            formedlen = 0;
-            ret = _snprintf_s(pCur,fmtlen-formedlen,fmtlen-formedlen-1,"[0x%08x]\t",i);
-            pCur += ret;
-            formedlen += ret;
+        if ((i % 16) == 0) {
+            if (i > 0) {
+                SNPRINTF("    ");
+                while (lastlen < i) {
+                    if (pBuffer[lastlen] >= ' ' && pBuffer[lastlen] <= '~') {
+                        SNPRINTF("%c", pBuffer[lastlen]);
+                    } else {
+                        SNPRINTF(".");
+                    }
+                    lastlen ++;
+                }
+            }
+            SNPRINTF("\n");
+            SNPRINTF("0x%08x:",i);
         }
 
-        ret = _snprintf_s(pCur,fmtlen-formedlen,fmtlen-formedlen-1,"0x%02x ",pBuffer[i]);
-        pCur += ret;
-        formedlen += ret;
+        SNPRINTF(" 0x%2x", pBuffer[i]);
     }
 
-    if(formedlen > 0) {
-        InnerDebug(pLine);
-        pCur = pLine;
-        formedlen = 0;
+    if (formedlen > 0) {
+        while((i%16)) {
+            SNPRINTF("     ");
+            i ++;
+        }
+        SNPRINTF("    ");
+        while(lastlen < buflen) {
+            if(pBuffer[lastlen] >= ' ' && pBuffer[lastlen] <= '~') {
+                SNPRINTF("%c", pBuffer[lastlen]);
+            } else {
+                SNPRINTF(".");
+            }
+            lastlen ++;
+        }
+        SNPRINTF("\n");
+        FLUSH_BUFFER();
     }
 
     delete [] pLine;
     pLine = NULL;
+    return ;
+
+}
+
+
+extern "C" void DebugOutString(const char* file, int lineno, const char* fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    __inner_format_output(file, lineno, fmt, ap, InnerDebug, NULL);
+    return;
+}
+
+
+extern "C" void DebugBufferFmt(const char* file, int lineno, unsigned char* pBuffer, int buflen, const char* fmt, ...)
+{
+    va_list ap;
+    if (fmt != NULL) {
+        va_start(ap, fmt);    
+    }
+    
+    __inner_buffer_output(file,lineno, pBuffer, buflen, fmt,ap,InnerDebug,NULL);
     return ;
 }
 
